@@ -17,6 +17,7 @@ import java.util.concurrent.Future;
 import java.util.concurrent.LinkedBlockingDeque;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
+import java.util.stream.Collectors;
 
 
 @Slf4j
@@ -34,15 +35,19 @@ public class UserDaoTests {
         ExecutorService executorService = new ThreadPoolExecutor(50, 50, 1000, TimeUnit.SECONDS, new LinkedBlockingDeque<>());
         UserDao userDao = applicationContext.getBean(UserDao.class);
 
+        long begin = System.currentTimeMillis();
         List<Future<User>> futures = new ArrayList<>();
-        for (int i = 0; i < 1_000_000; i++) {
+        for (int i = 0; i < 5_000; i++) {
             Future<User> futureResult = executorService.submit(new UserService(userDao, new User()));
             futures.add(futureResult);
         }
         log.info("commit finished");
-        for (Future<User> futrue : futures) {
-            log.info("get user: " + futrue.isDone());
+        List<Future<User>> result = futures;
+        while (!result.isEmpty()) {
+            result = futures.stream().filter(f -> !f.isDone()).collect(Collectors.toList());
         }
+
+        log.info(String.valueOf((System.currentTimeMillis() - begin)/1000));
 
     }
 
